@@ -2,30 +2,36 @@
 
 import random
 import time
-
 from paho.mqtt import client as mqtt_client
 
 
 broker = 'broker.emqx.io'
 port = 1883
-topic = "test"
-# generate client ID with pub prefix randomly
+topic = "test/status"
+topic_reply = "test/reply"
 client_id = f'python-mqtt-{random.randint(0, 1000)}'
 username = 'emqx'
 password = "public"
-
+reply_msg = ""
 
 def connect_mqtt():
+    global reply_msg
     def on_connect(client, userdata, flags, rc):
         if rc == 0:
             print("Connected to MQTT Broker!")
+            client.subscribe(topic_reply)
         else:
             print("Failed to connect, return code %d\n", rc)
 
+    def on_message(client, userdata, msg):
+        global reply_msg
+        print(f"Received message '{msg.payload.decode()}' on topic '{msg.topic}'")
+        reply_msg = msg.payload.decode()
+
     client = mqtt_client.Client(client_id)
-    # client.tls_set(ca_certs='./server-ca.crt')
     client.username_pw_set(username, password)
     client.on_connect = on_connect
+    client.on_message = on_message
     client.connect(broker, port)
     return client
 
@@ -33,19 +39,20 @@ def connect_mqtt():
 client = connect_mqtt()
 client.loop_start()
 def publish(msg):
-    if msg == "open" :
-        msg = 1
-    elif msg == "close":
-        msg = 2
-    else:
-        msg = 0
-    result = client.publish(topic, msg)
-    time.sleep(1)
-    status = result[0]
-    if status == 0:
-        return True
+    global reply_msg
+    reply_msg = ""
+    client.publish(topic, msg)
+    time.sleep(2)
+    if reply_msg != "":
+        return reply_msg
     else:
         return False
 
 if __name__ == '__main__':
-    publish("open")
+    try:
+        while True:
+            pass
+    except KeyboardInterrupt:
+        # 关闭MQTT客户端
+        client.loop_stop()
+        client.disconnect()
