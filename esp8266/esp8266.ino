@@ -15,6 +15,7 @@ const char *password = "password";  // Enter WiFi password
 //const char *mqtt_broker = "broker-cn.emqx.io"; // EMQX broker endpoint
 const char *mqtt_broker = "broker.emqx.io"; // EMQX broker ensdpoint
 const char *mqtt_topic = "test/status";     // MQTT topic
+const char *mqtt_topic_replay = "test/reply";     // MQTT topic
 const char *mqtt_username = "emqx";  // MQTT username for authentication
 const char *mqtt_password = "public";  // MQTT password for authentication
 const int mqtt_port = 1883;  // MQTT port (TCP)
@@ -22,6 +23,7 @@ const int mqtt_port = 1883;  // MQTT port (TCP)
 WiFiClient espClient;
 PubSubClient mqtt_client(espClient);
 Ticker timer;
+
 void timer_keep();
 
 void connectToWiFi();
@@ -44,8 +46,8 @@ void setup() {
 }
 
 void timer_keep() {
-  mqtt_client.publish(mqtt_topic, "connected");
-  Serial.println("topic pub");
+    mqtt_client.publish(mqtt_topic, "connected");
+    Serial.println("topic pub");
 }
 
 void connectToWiFi() {
@@ -88,57 +90,69 @@ void mqttCallback(char *topic, byte *payload, unsigned int length) {
     state[0] = (char) payload[0];
     Serial.println("-----------------------");
     //打开1号舵机
-    if (state== "1") 
-    {
+    if (state == "1") {
+        myservo1.write(60);
+        delay(500);//延时
         myservo1.write(160);
-        mqtt_client.publish("test/reply", "servo1 has opened");
+        mqtt_client.publish(mqtt_topic_replay, "servo1 has opened");
         delay(500);//延时
         myservo1.write(90);
-    //关闭1号舵机
-    } else if(state== "2")
-    {
-       myservo1.write(20);
-       mqtt_client.publish("test/reply", "servo1 has closed");
-       delay(500);//延时
-       myservo1.write(90);
-    //打开2号舵机
-    }else if(state=="3")
-    {
-       myservo2.write(20);
-       mqtt_client.publish("test/reply", "servo2 has opened");
-       delay(500);//延时
-       myservo2.write(90);
-    //关闭2号舵机
-    }else if(state=="4")
-    {
-       myservo2.write(160);
-       mqtt_client.publish("test/reply", "servo2 has closed");
-       delay(500);//延时
-       myservo2.write(90);
-    //打开12号舵机
-    }else if(state=="5")
-    {
-       myservo1.write(160);
-       myservo2.write(20);
-       mqtt_client.publish("test/reply", "servo1 and servo2 have opened");
-       delay(500);//延时
-       myservo1.write(90);
-       myservo2.write(90);
-    //关闭12号舵机
-    }else if(state=="6")
-    {
-       myservo1.write(20);
-       myservo2.write(160);
-       mqtt_client.publish("test/reply", "servo1 and servo2 have closed");
-       delay(500);//延时
-       myservo1.write(90);
-       myservo2.write(90);
+        //关闭1号舵机
+    } else if (state == "2") {
+        myservo1.write(120);
+        delay(500);//延时
+        myservo1.write(20);
+        mqtt_client.publish(mqtt_topic_replay, "servo1 has closed");
+        delay(500);//延时
+        myservo1.write(90);
+        //打开2号舵机
+    } else if (state == "3") {
+        myservo2.write(120);
+        delay(500);//延时
+        myservo2.write(20);
+        mqtt_client.publish(mqtt_topic_replay, "servo2 has opened");
+        delay(500);//延时
+        myservo2.write(90);
+        //关闭2号舵机
+    } else if (state == "4") {
+        myservo2.write(60);
+        delay(500);//延时
+        myservo2.write(160);
+        mqtt_client.publish(mqtt_topic_replay, "servo2 has closed");
+        delay(500);//延时
+        myservo2.write(90);
+        //打开12号舵机
+    } else if (state == "5") {
+        myservo1.write(60);
+        delay(500);//延时
+        myservo1.write(160);
+        mqtt_client.publish(mqtt_topic_replay, "servo1 and servo2 have opened");
+        delay(500);//延时
+        myservo1.write(90);
+        myservo2.write(120);
+        delay(500);//延时
+        myservo2.write(20);
+        delay(500);//延时
+        myservo2.write(90);
+        //关闭12号舵机
+    } else if (state == "6") {
+        myservo1.write(120);
+        delay(500);//延时
+        myservo1.write(20);
+        mqtt_client.publish(mqtt_topic_replay, "servo1 and servo2 have closed");
+        delay(500);//延时
+        myservo1.write(90);
+        myservo2.write(60);
+        delay(500);//延时
+        myservo2.write(160);
+        delay(500);//延时
+        myservo2.write(90);
     }
 }
 
 void loop() {
     if (WiFi.status() != WL_CONNECTED) {
-      connectToWiFi();
+        connectToWiFi();
     }
     if (!mqtt_client.connected()) {
         connectToMQTTBroker();
